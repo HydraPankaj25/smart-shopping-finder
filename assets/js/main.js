@@ -328,7 +328,7 @@ class ShoppingApp {
         // Add to recently viewed
         this.dataManager.addToRecentlyViewed(product);
 
-        // Show product details modal/page
+        // Show product details modal
         this.showProductModal(product);
     }
 
@@ -416,7 +416,6 @@ class ShoppingApp {
 
     showQuickView(productId) {
         // Similar to showProductDetails but in a smaller modal
-        // Implementation similar to showProductModal but more compact
         const product = this.findProductById(productId);
         if (!product) return;
 
@@ -468,5 +467,359 @@ class ShoppingApp {
         }
     }
 
+    // Complete the findProductById function
     findProductById(id) {
-        return this.currentProducts.find(
+        return this.currentProducts.find(product => product.id.toString() === id.toString()) ||
+            this.dataManager.getFavorites().find(product => product.id.toString() === id.toString()) ||
+            this.dataManager.getCompareItems().find(product => product.id.toString() === id.toString());
+    }
+
+    // Helper Methods
+    showLoading(message = 'Loading...') {
+        if (this.loadingComponent) {
+            this.loadingComponent.show(message);
+        } else {
+            // Fallback loading display
+            const loadingEl = document.querySelector('.loading-indicator');
+            if (loadingEl) {
+                loadingEl.textContent = message;
+                loadingEl.style.display = 'block';
+            }
+        }
+    }
+
+    hideLoading() {
+        if (this.loadingComponent) {
+            this.loadingComponent.hide();
+        } else {
+            const loadingEl = document.querySelector('.loading-indicator');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+        }
+    }
+
+    showError(message) {
+        // Create error notification
+        const errorNotification = document.createElement('div');
+        errorNotification.className = 'error-notification';
+        errorNotification.innerHTML = `
+            <div class="error-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>${message}</span>
+                <button class="close-error" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Style the notification
+        errorNotification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4757;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10001;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease-out;
+        `;
+
+        document.body.appendChild(errorNotification);
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (errorNotification.parentNode) {
+                errorNotification.remove();
+            }
+        }, 5000);
+    }
+
+    showSuccess(message) {
+        // Create success notification
+        const successNotification = document.createElement('div');
+        successNotification.className = 'success-notification';
+        successNotification.innerHTML = `
+            <div class="success-content">
+                <i class="fas fa-check-circle"></i>
+                <span>${message}</span>
+                <button class="close-success" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Style the notification
+        successNotification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #2ed573;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10001;
+            max-width: 400px;
+            animation: slideInRight 0.3s ease-out;
+        `;
+
+        document.body.appendChild(successNotification);
+
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (successNotification.parentNode) {
+                successNotification.remove();
+            }
+        }, 3000);
+    }
+
+    updateResultsCount(count) {
+        const counterElement = document.querySelector('.results-count');
+        if (counterElement) {
+            counterElement.textContent = `${count} products found`;
+        }
+    }
+
+    // Event Handlers
+    handleDataChange(data) {
+        console.log('Data changed:', data);
+        this.refreshCurrentView();
+    }
+
+    handleNetworkStatusChange(isOnline) {
+        const statusIndicator = document.querySelector('.network-status');
+        if (statusIndicator) {
+            statusIndicator.className = `network-status ${isOnline ? 'online' : 'offline'}`;
+            statusIndicator.textContent = isOnline ? 'Online' : 'Offline';
+        }
+
+        if (!isOnline) {
+            this.showError('You are offline. Some features may not work.');
+        }
+    }
+
+    handleHashChange() {
+        const hash = window.location.hash.slice(1);
+        if (hash && ['search', 'favorites', 'compare'].includes(hash)) {
+            this.switchToTab(hash);
+        }
+    }
+
+    handleKeyboardShortcuts(event) {
+        // Ctrl/Cmd + K for search focus
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault();
+            const searchInput = document.querySelector('.search-input');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+
+        // Escape to close modals
+        if (event.key === 'Escape') {
+            const modal = document.querySelector('.product-modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+    }
+
+    pauseApp() {
+        console.log('App paused');
+        // Stop auto-refresh or any background processes
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+    }
+
+    resumeApp() {
+        console.log('App resumed');
+        // Restart auto-refresh
+        this.setupAutoRefresh();
+    }
+
+    setupAutoRefresh() {
+        // Auto refresh trending products every 5 minutes
+        this.refreshInterval = setInterval(() => {
+            if (this.currentView === 'search' && this.currentProducts.length === 0) {
+                this.loadInitialData();
+            }
+        }, 5 * 60 * 1000);
+    }
+
+    trackSearch(query, resultCount) {
+        // Analytics tracking
+        console.log(`Search tracked: "${query}" - ${resultCount} results`);
+
+        // You can integrate with analytics services here
+        if (window.gtag) {
+            window.gtag('event', 'search', {
+                search_term: query,
+                result_count: resultCount
+            });
+        }
+    }
+
+    // Utility Methods for Global Functions
+    toggleFavorite(productId) {
+        const product = this.findProductById(productId);
+        if (!product) return;
+
+        if (this.dataManager.isFavorite(productId)) {
+            this.dataManager.removeFromFavorites(productId);
+            this.showSuccess('Removed from favorites');
+        } else {
+            this.dataManager.addToFavorites(product);
+            this.showSuccess('Added to favorites');
+        }
+
+        this.refreshCurrentView();
+    }
+
+    toggleCompare(productId) {
+        const product = this.findProductById(productId);
+        if (!product) return;
+
+        if (this.dataManager.isInCompare(productId)) {
+            this.dataManager.removeFromCompare(productId);
+            this.showSuccess('Removed from comparison');
+        } else {
+            if (this.dataManager.getCompareItems().length >= 4) {
+                this.showError('You can compare up to 4 products only');
+                return;
+            }
+            this.dataManager.addToCompare(product);
+            this.showSuccess('Added to comparison');
+        }
+
+        this.refreshCurrentView();
+    }
+
+    setPriceAlert(productId) {
+        const product = this.findProductById(productId);
+        if (!product) return;
+
+        // Create price alert modal
+        const modal = document.createElement('div');
+        modal.className = 'price-alert-modal-overlay';
+        modal.innerHTML = `
+            <div class="price-alert-modal">
+                <div class="modal-header">
+                    <h3>Set Price Alert</h3>
+                    <button class="modal-close" onclick="this.closest('.price-alert-modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Get notified when <strong>${product.title}</strong> drops below your target price.</p>
+                    <div class="current-price-info">
+                        Current Price: <strong>$${product.price}</strong>
+                    </div>
+                    <div class="price-input-group">
+                        <label for="targetPrice">Target Price ($):</label>
+                        <input type="number" id="targetPrice" placeholder="Enter target price" 
+                               max="${product.price * 0.95}" step="0.01" class="price-input">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="this.closest('.price-alert-modal-overlay').remove()">Cancel</button>
+                    <button class="btn" onclick="app.createPriceAlert('${productId}', document.getElementById('targetPrice').value)">
+                        Set Alert
+                    </button>
+                </div>
+            </div>
+        `;
+
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        `;
+
+        document.body.appendChild(modal);
+    }
+
+    createPriceAlert(productId, targetPrice) {
+        const product = this.findProductById(productId);
+        if (!product || !targetPrice) {
+            this.showError('Invalid price alert data');
+            return;
+        }
+
+        const price = parseFloat(targetPrice);
+        if (price >= product.price) {
+            this.showError('Target price must be lower than current price');
+            return;
+        }
+
+        // Save price alert
+        this.dataManager.addPriceAlert({
+            productId: productId,
+            productTitle: product.title,
+            currentPrice: product.price,
+            targetPrice: price,
+            createdAt: new Date().toISOString()
+        });
+
+        this.showSuccess(`Price alert set for $${price}`);
+
+        // Close modal
+        const modal = document.querySelector('.price-alert-modal-overlay');
+        if (modal) {
+            modal.remove();
+        }
+    }
+}
+
+// Global helper functions
+function toggleFavorite(productId) {
+    if (window.app) {
+        window.app.toggleFavorite(productId);
+    }
+}
+
+function toggleCompare(productId) {
+    if (window.app) {
+        window.app.toggleCompare(productId);
+    }
+}
+
+function setPriceAlert(productId) {
+    if (window.app) {
+        window.app.setPriceAlert(productId);
+    }
+}
+
+function showProductDetails(productId) {
+    if (window.app) {
+        window.app.showProductDetails(productId);
+    }
+}
+
+function showQuickView(productId) {
+    if (window.app) {
+        window.app.showQuickView(productId);
+    }
+}
+
+// Initialize app when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.shoppingApp = new ShoppingApp();
+});
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ShoppingApp;
+}
