@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Shopping Discount Finder</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header Component -->
+        <header class="header">
+            <h1><i class="fas fa-shopping-cart"></i> Smart Shopping Finder</h1>
+            <p>Find the best deals and compare prices across multiple stores</p>
+        </header>
+
+        <!-- Search Component -->
+        <div id="searchComponent"></div>
+
+        <!-- Loading Component -->
+        <div id="loadingComponent"></div>
+
+        <!-- Tabs Component -->
+        <div id="tabsComponent"></div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+
+    <!-- Utils -->
+    <script src="utils/helpers.js"></script>
+
+    <!-- Services -->
+    <script src="services/DataManager.js"></script>
+    <script src="services/APIService.js"></script>
+
+    <!-- Components -->
+    <script src="components/LoadingComponent.js"></script>
+    <script src="components/ProductCard.js"></script>
+    <script src="components/SearchComponent.js"></script>
+    <script src="components/TabsComponent.js"></script>
+
+    <!-- Main App -->
+    <script src="assets/js/main.js"></script>
+</body>
+
+</html>
